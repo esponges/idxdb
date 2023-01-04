@@ -5,6 +5,7 @@ export enum DBName {
 export enum StoreName {
   Users = "users",
   Posts = "posts",
+  News = "news",
 }
 
 export interface User {
@@ -23,22 +24,8 @@ let request: IDBOpenDBRequest;
 let db: IDBDatabase;
 let version = 1;
 
-// if (typeof window !== 'undefined' && window.indexedDB) {
-//   console.log("Your browser supports a stable version of IndexedDB.");
-
-//   request = window.indexedDB.open(DBName.Main, version);
-//   request.onsuccess = (_event) => {
-//     console.log("Database opened successfully");
-//     db = request.result;
-//     version = db.version;
-//   };
-// } else {
-//   console.error("Your browser doesn't support a stable version of IndexedDB.");
-// }
-
 // we will use this function to create a new store in our indexedDB
-export const createDB = (storeName?: StoreName) => {
-  version += 1; // increment version to trigger onupgradeneeded
+export const createDB = () => {
   request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
   /* 
   onupgradeneeded is called when the database is created or the version is changed
@@ -58,6 +45,28 @@ export const createDB = (storeName?: StoreName) => {
       db.createObjectStore(StoreName.Posts, { keyPath: "id" });
     }
   };
+}
+
+export const createStore = (storeName: StoreName) => {
+  version += 1;
+  console.log('version', version);
+  request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
+
+  request.onupgradeneeded = (_event) => {
+    db = request.result;
+    if (!db.objectStoreNames.contains(storeName)) {
+      console.log(`Creating ${storeName} store`);
+      db.createObjectStore(storeName, { keyPath: "id" });
+    }
+  };
+
+  request.onsuccess = (_event) => {
+    console.log(`Store ${storeName} created successfully`);
+  };
+
+  request.onerror = (event) => {
+    console.error('Error creating store', event);
+  }
 }
 
 // we will use this function to add data to our indexedDB
