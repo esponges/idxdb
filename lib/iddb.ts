@@ -21,11 +21,12 @@ export interface Post {
 }
 
 let request: IDBOpenDBRequest;
-let db: IDBDatabase|null;
+let db: IDBDatabase;
 let version = 1;
 
 // we will use this function to create a new store in our indexedDB
 export const initDB = () => {
+  console.log('initDB');
   request = window.indexedDB.open(DBName.Main); // keep the existing version if it exists
   /* 
   onupgradeneeded is called when the database is created or the version is changed
@@ -46,7 +47,7 @@ export const initDB = () => {
   // discard the old connection
   request.onsuccess = (_event) => {
     // this is not needed apparently (check it)
-    db = null;
+    console.log('request.onsuccess - initDB');
     version = request.result.version;
   };
 };
@@ -57,6 +58,10 @@ export const deleteDB = () => {
   request.onsuccess = (_event) => {
     console.log('Database deleted successfully');
   };
+
+  request.onerror = (event) => {
+    console.error('Error deleting database', event);
+  }
 };
 
 export const createStore = (storeName: StoreName) => {
@@ -83,11 +88,10 @@ export const createStore = (storeName: StoreName) => {
 
 // we will use this function to add data to our indexedDB
 export const addData = <T>(storeName: StoreName, data: T) => {
-  // close prev connection
   // open a new connection to the database
   request = window.indexedDB.open(DBName.Main, version);
   
-  // this works
+  // this works!
   request.onsuccess = (_event) => {
     console.log('request.onsuccess');
     db = request.result;
