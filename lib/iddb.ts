@@ -21,44 +21,12 @@ export interface Post {
 }
 
 let request: IDBOpenDBRequest;
-let db: IDBDatabase;
+let db: IDBDatabase|null;
 let version = 1;
 
-// if (typeof window !== 'undefined' && 'indexedDB' in window) {
-//   console.log('This browser supports IndexedDB');
-//   request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
-//   request.onsuccess = (_event) => {
-//     db = request.result;
-//     console.log('Database initialized successfully');
-//   };
-// }
-
-export const initDb = () => {
-  if (typeof window === 'undefined') return;
-  // open current connection with the existing version — no second argument is passed
-  request = window.indexedDB.open(DBName.Main);
-
-  request.onsuccess = (_event) => {
-    db = request.result;
-    // update global version for the next requests
-    version = db.version;
-    console.log('Database initialized successfully');
-  };
-
-  request.onerror = (event) => {
-    console.error('Error initializing database', event);
-  }
-
-  // close the database connection when the window is closed
-  window.onunload = () => {
-    db.close();
-  }
-};
-
 // we will use this function to create a new store in our indexedDB
-export const createDB = () => {
-  version += 1;
-  request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
+export const initDB = () => {
+  request = window.indexedDB.open(DBName.Main); // keep the existing version if it exists
   /* 
   onupgradeneeded is called when the database is created or the version is changed
   the version should only change when we add, remove or modify a store
@@ -73,6 +41,21 @@ export const createDB = () => {
       console.log(`Creating ${StoreName.Posts} store`);
       db.createObjectStore(StoreName.Posts, { keyPath: 'id' });
     }
+  };
+
+  // discard the old connection
+  request.onsuccess = (_event) => {
+    // this is not needed apparently (check it)
+    db = null;
+    version = request.result.version;
+  };
+};
+
+export const deleteDB = () => {
+  request = window.indexedDB.deleteDatabase(DBName.Main);
+  console.log('Attempting to delete database');
+  request.onsuccess = (_event) => {
+    console.log('Database deleted successfully');
   };
 };
 
@@ -91,7 +74,6 @@ export const createStore = (storeName: StoreName) => {
   request.onsuccess = (_event) => {
     console.log(`Store ${storeName} created successfully`);
     // close the database connection
-    db.close();
   };
 
   request.onerror = (event) => {
@@ -104,7 +86,8 @@ export const addData = <T>(storeName: StoreName, data: T) => {
   // close prev connection
   // open a new connection to the database
   request = window.indexedDB.open(DBName.Main, version);
-
+  
+  // this works
   request.onsuccess = (_event) => {
     console.log('request.onsuccess');
     db = request.result;
@@ -112,16 +95,10 @@ export const addData = <T>(storeName: StoreName, data: T) => {
     const store = tx.objectStore(storeName);
     store.add(data);
   };
-  // request.onsuccess = (_event) => {
-  //   console.log(`Data added successfully to ${storeName} store`);
-  // };
 
-  // request.onerror = (event) => {
-  //   console.error('Error adding data', event);
-  // };
-  // const tx = db.transaction(storeName, 'readwrite');
-  // const store = tx.objectStore(storeName);
-  // store.add(data);
+  request.onerror = (event) => {
+    console.error('Error adding data', event);
+  }
 };
 
 // we will use this function to get data from our indexedDB
@@ -172,6 +149,8 @@ export const getAllData = (storeName: StoreName) => {
     return data;
   };
 };
+
+
 
 // remove isolatedModules from tsconfig.json warning
 export {};
