@@ -23,21 +23,30 @@ let request: IDBOpenDBRequest;
 let db: IDBDatabase;
 let version = 1;
 
-if (typeof window !== 'undefined' && window.indexedDB) {
-  console.log("Your browser supports a stable version of IndexedDB.");
+// if (typeof window !== 'undefined' && window.indexedDB) {
+//   console.log("Your browser supports a stable version of IndexedDB.");
 
-  request = window.indexedDB.open(DBName.Main, version);
-  request.onsuccess = (_event) => {
-    db = request.result;
-    version = db.version;
-  };
+//   request = window.indexedDB.open(DBName.Main, version);
+//   request.onsuccess = (_event) => {
+//     console.log("Database opened successfully");
+//     db = request.result;
+//     version = db.version;
+//   };
+// } else {
+//   console.error("Your browser doesn't support a stable version of IndexedDB.");
+// }
+
+// we will use this function to create a new store in our indexedDB
+export const createDB = (storeName?: StoreName) => {
+  version += 1; // increment version to trigger onupgradeneeded
+  request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
   /* 
-    onupgradeneeded is called when the database is created or the version is changed
-    the version should only change when we add, remove or modify a store
+  onupgradeneeded is called when the database is created or the version is changed
+  the version should only change when we add, remove or modify a store
 
-    in this case this function will be called only when we start the app for the first time
-    or when we change the version of the database
-   */
+  in this case this function will be called only when we start the app for the first time
+  or when we change the version of the database
+  */
   request.onupgradeneeded = (_event) => {
     db = request.result;
     if (!db.objectStoreNames.contains(StoreName.Users)) {
@@ -48,16 +57,6 @@ if (typeof window !== 'undefined' && window.indexedDB) {
       console.log(`Creating ${StoreName.Posts} store`);
       db.createObjectStore(StoreName.Posts, { keyPath: "id" });
     }
-  };
-} else {
-  console.error("Your browser doesn't support a stable version of IndexedDB.");
-}
-
-// we will use this function to create a new store in our indexedDB
-export const createDB = (storeName: StoreName) => {
-  request.onupgradeneeded = (_event) => {
-    const db = request.result;
-    db.createObjectStore(storeName, { keyPath: "id" });
   };
 }
 
