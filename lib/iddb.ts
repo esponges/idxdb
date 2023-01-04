@@ -1,5 +1,3 @@
-// polyfill for indexedDB
-
 export enum DBName {
   Main = "main",
 }
@@ -9,19 +7,53 @@ export enum StoreName {
   Posts = "posts",
 }
 
-// type UpgradeneededEvent = IDBVersionChangeEvent & {
-//   target: IDBOpenDBRequest;
-// }
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  body: string;
+}
 
 let request: IDBOpenDBRequest;
+let db: IDBDatabase;
+let version = 1;
 
 if (typeof window !== 'undefined' && window.indexedDB) {
-  request = window.indexedDB.open(DBName.Main, 1);
+  console.log("Your browser supports a stable version of IndexedDB.");
+
+  request = window.indexedDB.open(DBName.Main, version);
+  request.onsuccess = (_event) => {
+    db = request.result;
+    version = db.version;
+  };
+  /* 
+    onupgradeneeded is called when the database is created or the version is changed
+    the version should only change when we add, remove or modify a store
+
+    in this case this function will be called only when we start the app for the first time
+    or when we change the version of the database
+   */
+  request.onupgradeneeded = (_event) => {
+    db = request.result;
+    if (!db.objectStoreNames.contains(StoreName.Users)) {
+      console.log(`Creating ${StoreName.Users} store`);
+      db.createObjectStore(StoreName.Users, { keyPath: "id" });
+    }
+    if (!db.objectStoreNames.contains(StoreName.Posts)) {
+      console.log(`Creating ${StoreName.Posts} store`);
+      db.createObjectStore(StoreName.Posts, { keyPath: "id" });
+    }
+  };
 } else {
   console.error("Your browser doesn't support a stable version of IndexedDB.");
 }
 
-// we will use this function to create a new indexedDB
+// we will use this function to create a new store in our indexedDB
 export const createDB = (storeName: StoreName) => {
   request.onupgradeneeded = (_event) => {
     const db = request.result;
@@ -31,12 +63,38 @@ export const createDB = (storeName: StoreName) => {
 
 // we will use this function to add data to our indexedDB
 export const addData = <T>(storeName: StoreName, data: T) => {
-  request.onsuccess = (_event) => {
+  // if the database is not created yet, we will create it
+  // todo: confirm that works
+  request.onupgradeneeded = (_event) => {
     const db = request.result;
-    const transaction = db.transaction(storeName, "readwrite");
-    const store = transaction.objectStore(storeName);
-    store.add(data);
+    if (!db.objectStoreNames.contains(storeName)) {
+      db.createObjectStore(storeName, { keyPath: "id" });
+    }
   };
+
+  // todo: confirm that works
+  request.onsuccess = (_event) => {
+    if (request.readyState === "done") {
+      const db = request.result;
+      // idb operations are transactional by default
+      const transaction = db.transaction(storeName, "readwrite");
+      // where we will store our data
+      const store = transaction.objectStore(storeName);
+      // add data to our store
+      const addRequest = store.add(data);
+
+      addRequest.onsuccess = () => {
+        console.log("Data added successfully");
+        // commit mutation or it will be rollbacked
+        transaction.commit();
+      };
+    }
+  };
+  
+  // check if there is an error
+  request.onerror = (event) => {
+    console.error('Error adding data', event);
+  }
 }
 
 // we will use this function to get data from our indexedDB
