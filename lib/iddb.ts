@@ -24,14 +24,13 @@ let request: IDBOpenDBRequest;
 let db: IDBDatabase;
 let version = 1;
 
-// we will use this function to create a new store in our indexedDB
-export const initDB = () => {
-  console.log('initDB');
-  request = window.indexedDB.open(DBName.Main); // keep the existing version if it exists
-  /* 
-  onupgradeneeded is called when the database is created or the version is changed
-  the version should only change when we add, remove or modify a store
-  */
+// create the stores if they don't exist
+const createOrInitDB = () => {
+  request = window.indexedDB.open(DBName.Main); // keep the existing version if exists
+
+
+  // onupgradeneeded is called when the database is created or the version is changed
+  // the version should only change when we add, remove or modify a store
   request.onupgradeneeded = (_event) => {
     db = request.result;
     if (!db.objectStoreNames.contains(StoreName.Users)) {
@@ -43,6 +42,11 @@ export const initDB = () => {
       db.createObjectStore(StoreName.Posts, { keyPath: 'id' });
     }
   };
+};
+
+// we will use this function to create a new store in our indexedDB
+export const initDB = () => {
+  createOrInitDB();
 
   // discard the old connection
   request.onsuccess = (_event) => {
@@ -64,9 +68,11 @@ export const deleteDB = () => {
   }
 };
 
+// todo: fix, this one breaks the db connection
 export const createStore = (storeName: StoreName) => {
   version += 1;
   request = window.indexedDB.open(DBName.Main, version); // open a new connection to the database
+  console.log('createStore', storeName, 'version =', version);
 
   request.onupgradeneeded = (_event) => {
     db = request.result;
@@ -88,8 +94,9 @@ export const createStore = (storeName: StoreName) => {
 
 // we will use this function to add data to our indexedDB
 export const addData = <T>(storeName: StoreName, data: T) => {
-  // open a new connection to the database
-  request = window.indexedDB.open(DBName.Main, version);
+  // check if the store exists, if not create it
+  // and then add the data
+  request = window.indexedDB.open(DBName.Main);
   
   // this works!
   request.onsuccess = (_event) => {
@@ -116,6 +123,22 @@ export const getData = <T>(
       const transaction = db.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);
       const dataRequest = store.get(id);
+      dataRequest.onsuccess = () => {
+        resolve(dataRequest.result);
+      };
+    };
+  });
+};
+
+export const getStoreData = <T>(storeName: StoreName): Promise<T[]> => {
+  createOrInitDB();
+
+  return new Promise((resolve) => {
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const dataRequest = store.getAll();
       dataRequest.onsuccess = () => {
         resolve(dataRequest.result);
       };
