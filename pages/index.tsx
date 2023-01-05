@@ -3,10 +3,10 @@ import {
   StoreName,
   addData,
   initDB,
-  deleteDB,
   User,
   Post,
   getStoreData,
+  getDBStatus,
 } from '../lib/iddb';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -18,6 +18,7 @@ interface IDBData {
 
 export default function Home() {
   const [users, setUsers] = useState<Pick<IDBData, 'users'>[]>();
+  const [isDBReady, setIsDBReady] = useState<boolean>(false);
   const router = useRouter();
 
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,6 +42,11 @@ export default function Home() {
     setUsers(IDBUsers);
   };
 
+  const handleGetDBStatus = async () => {
+    const status = await getDBStatus();
+    setIsDBReady(status);
+  };
+
   return (
     <>
       <Head>
@@ -50,7 +56,16 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
       <main>
-        {/* create a form to add user data */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: '2rem',
+            marginBottom: '2rem',
+          }}
+        >
+          <h1>IndexedDB</h1>
+          {isDBReady ? <h2>DB is ready</h2> : <h2>DB is not ready</h2>}
+        </div>
         <form
           onSubmit={handleAddUser}
           style={{
@@ -75,13 +90,17 @@ export default function Home() {
             justifyContent: 'center',
             alignItems: 'center',
             gap: '1rem',
+            marginTop: '4rem',
           }}
         >
-          <button onClick={() => initDB()}>Init DB</button>
-          <button onClick={() => deleteDB()}>Delete DB</button>
-          <button onClick={() => handleGetStoreData(StoreName.Users)}>
-            Get Users
-          </button>
+          {isDBReady ? (
+            <button onClick={() => handleGetStoreData(StoreName.Users)}>
+              Get Users
+            </button>
+          ) : (
+            <button onClick={() => initDB()}>Init DB</button>
+          )}
+          <button onClick={() => handleGetDBStatus()}>Get DB Status</button>
         </div>
       </main>
     </>
