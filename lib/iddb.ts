@@ -112,6 +112,42 @@ export const addData = <T>(storeName: StoreName, data: T) => {
   }
 };
 
+// check if the database is open
+export const getDBStatus = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    request = window.indexedDB.open(DBName.Main);
+    request.onsuccess = (_event) => {
+      // check if the stores exist
+      const db = request.result;
+
+      let transaction: IDBTransaction;
+      let store: IDBObjectStore;
+      // do this in a try catch block because if the store doesn't exist or the app will crash
+      try {
+        transaction = db.transaction(StoreName.Users, 'readwrite');
+        store = transaction.objectStore(StoreName.Users);
+      } catch (error) {
+        resolve(false);
+        return;
+      }
+
+      // get first item
+      const dataRequest = store.get(1);
+
+      // resolve accordingly
+      dataRequest.onsuccess = () => {
+        resolve(true);
+      };
+      dataRequest.onerror = () => {
+        resolve(false);
+      }
+    };
+    request.onerror = (_event) => {
+      resolve(false);
+    };
+  });
+};
+
 // we will use this function to get data from our indexedDB
 export const getData = <T>(
   storeName: StoreName,
