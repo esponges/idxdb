@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Stores, addData, initDB } from '../lib/db';
+import { Stores, User, addData, getStoreData, initDB } from '../lib/db';
 
 export default function Home() {
   const [isDBReady, setIsDBReady] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]|[]>([]);
 
   const handleInitDB = async () => {
     const status = await initDB();
@@ -38,6 +39,10 @@ export default function Home() {
     }
   };
 
+  const handleGetUsers = async () => {
+    const users = await getStoreData<User>(Stores.Users);
+    setUsers(users);
+  };
 
   return (
     <main style={{ textAlign: 'center', marginTop: '3rem' }}>
@@ -54,6 +59,27 @@ export default function Home() {
             <button type="submit">Add User</button>
           </form>
           {error && <p style={{ color: 'red' }}>{error}</p>}
+          <button onClick={handleGetUsers}>Get Users</button>
+          {users.length > 0 && (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>{user.id}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </>
       )}
     </main>

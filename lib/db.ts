@@ -8,9 +8,9 @@ export interface User {
   email: string;
 }
 
-export const Stores = {
-  Users: 'users',
-};
+export enum Stores {
+  Users = 'users',
+}
 
 export const initDB = (): Promise<boolean|IDBDatabase> => {
   return new Promise((resolve) => {
@@ -60,6 +60,23 @@ export const addData = <T>(storeName: string, data: T): Promise<T|string|null> =
       } else {
         resolve('Unknown error');
       }
+    };
+  });
+};
+
+export const getStoreData = <T>(storeName: Stores): Promise<T[]> => {
+  return new Promise((resolve) => {
+    request = indexedDB.open('myDB');
+
+    request.onsuccess = () => {
+      console.log('request.onsuccess - getAllData');
+      db = request.result;
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const res = store.getAll();
+      res.onsuccess = () => {
+        resolve(res.result);
+      };
     };
   });
 };
