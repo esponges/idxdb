@@ -84,6 +84,28 @@ export const deleteData = (storeName: string, key: string): Promise<boolean> => 
   });
 };
 
+export const updateData = <T>(storeName: string, key: string, data: T): Promise<T|string|null> => {
+  return new Promise((resolve) => {
+    request = indexedDB.open('myDB', version);
+
+    request.onsuccess = () => {
+      console.log('request.onsuccess - updateData', key);
+      db = request.result;
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const res = store.get(key);
+      res.onsuccess = () => {
+        const newData = { ...res.result, ...data };
+        store.put(newData);
+        resolve(newData);
+      };
+      res.onerror = () => {
+        resolve(null);
+      }
+    };
+  });
+};
+
 export const getStoreData = <T>(storeName: Stores): Promise<T[]> => {
   return new Promise((resolve) => {
     request = indexedDB.open('myDB');
