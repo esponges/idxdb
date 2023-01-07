@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stores, User, addData, getStoreData, initDB } from '../lib/db';
+import { Stores, User, addData, deleteData, getStoreData, initDB } from '../lib/db';
 
 export default function Home() {
   const [isDBReady, setIsDBReady] = useState<boolean>(false);
@@ -41,6 +41,20 @@ export default function Home() {
     }
   };
 
+  const handleRemoveUser = async (id: string) => {
+    try {
+      await deleteData(Stores.Users, 'foo');
+      // refetch users after deleting data
+      handleGetUsers();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Something went wrong deleting the user');
+      }
+    }
+  };
+
   const handleGetUsers = async () => {
     const users = await getStoreData<User>(Stores.Users);
     setUsers(users);
@@ -69,6 +83,7 @@ export default function Home() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>ID</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -77,6 +92,9 @@ export default function Home() {
                     <td>{user.name}</td>
                     <td>{user.email}</td>
                     <td>{user.id}</td>
+                    <td>
+                      <button onClick={() => handleRemoveUser(user.id)}>Delete</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
