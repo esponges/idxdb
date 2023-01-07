@@ -30,6 +30,8 @@ export default function Home() {
 
     try {
       const res = await addData(Stores.Users, { name, email, id });
+      // refetch users after creating data
+      handleGetUsers();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
